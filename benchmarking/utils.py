@@ -29,11 +29,12 @@ def prepare_cache(model, inputs, num_tokens_to_generate):
         max_batch_size=batch_size,
         max_cache_len=seq_length + num_tokens_to_generate + 1,
         dtype=model.dtype,
+        device=model.device
     )
-    cache_position = torch.arange(seq_length)
+    cache_position = torch.arange(seq_length).to(model.device)
     generated_ids = torch.zeros(
         batch_size, seq_length + num_tokens_to_generate + 1, dtype=torch.int
-    )
+    ).to(model.device)
     generated_ids[:, cache_position] = inputs["input_ids"].to(torch.int)
     return past_key_values, cache_position, generated_ids
 

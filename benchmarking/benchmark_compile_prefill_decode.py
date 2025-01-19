@@ -25,6 +25,8 @@ from compile_functions import (
     compile_mlp_attn_fn,
 )
 
+device = "cpu"
+# device = "cuda:0"
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -40,7 +42,7 @@ def run_model(
     log_decodings: bool = False,
 ) -> dict[str, float]:
 
-    model = LlamaForCausalLM.from_pretrained(LLAMA3_MODEL_PATH)
+    model = LlamaForCausalLM.from_pretrained(LLAMA3_MODEL_PATH).to(device)
     tokenizer = AutoTokenizer.from_pretrained(LLAMA3_MODEL_PATH, padding_side="left")
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -72,7 +74,7 @@ def run_model(
 
     _, seq_length = inputs["input_ids"].shape
     generated_ids[:, seq_length] = next_token[:, 0]
-    cache_position = torch.tensor([seq_length + 1])
+    cache_position = torch.tensor([seq_length + 1]).to(model.device)
 
     if not compile_for_prefill and compile_fn is not None:
         model = compile_fn(model)
