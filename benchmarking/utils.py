@@ -5,7 +5,7 @@ import json
 import time
 
 
-PROMPTS_PATH = "./prompts.txt"
+PROMPTS_PATH = "./prompts2.txt"
 
 
 def load_prompts(num_prompts: int) -> list[str]:
@@ -27,7 +27,7 @@ def prepare_cache(model, inputs, num_tokens_to_generate):
     past_key_values = StaticCache(
         config=model.config,
         max_batch_size=batch_size,
-        max_cache_len=4096,
+        max_cache_len=seq_length + num_tokens_to_generate + 1,
         dtype=model.dtype,
     )
     cache_position = torch.arange(seq_length)
@@ -101,10 +101,18 @@ def benchmark_decode_one_token(
 
 
 def save_experiment_results(results, experiment_config, filename):
-    experiment_config["compile_fn"] = experiment_config["compile_fn"].__name__
+    experiment_config["compile_fn"] = (
+        experiment_config["compile_fn"].__name__
+        if experiment_config["compile_fn"] is not None
+        else "eager"
+    )
 
     with open(filename, mode="w") as file:
         json.dump(
             {"experiment_config": experiment_config, "results": results},
             file,
         )
+
+
+def get_experiment_name(experiment_config):
+    return f"{"prefill+decode_" if experiment_config['compile_for_prefill'] else "decode_"}{experiment_config['num_tokens_to_generate']}t_{experiment_config['num_prompts']}p_{experiment_config['compile_fn'].__name__ if experiment_config['compile_fn'] is not None else "eager"}"
