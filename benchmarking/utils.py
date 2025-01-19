@@ -56,20 +56,19 @@ def decode_one_token(
     model, cur_token, cache_position, past_key_values
 ) -> tuple[torch.Tensor, float, float]:
     # Reset the compiler caches to ensure no reuse between different runs
-    torch.compiler.reset()
-    with torch._inductor.utils.fresh_inductor_cache():
-        start = time.perf_counter()
-        with torch.no_grad():
-            logits = model(
-                cur_token,
-                position_ids=None,
-                cache_position=cache_position,
-                past_key_values=past_key_values,
-                return_dict=False,
-                use_cache=True,
-            )[0]
-            new_token = torch.argmax(logits[:, -1], dim=-1)[:, None]
-        end = time.perf_counter()
+
+    start = time.perf_counter()
+    with torch.no_grad():
+        logits = model(
+            cur_token,
+            position_ids=None,
+            cache_position=cache_position,
+            past_key_values=past_key_values,
+            return_dict=False,
+            use_cache=True,
+        )[0]
+        new_token = torch.argmax(logits[:, -1], dim=-1)[:, None]
+    end = time.perf_counter()
 
     return new_token, start, end
 
@@ -82,19 +81,21 @@ def benchmark_decode_one_token(
     past_key_values,
     generated_ids,
 ):
-    time_list = []
-    gen_time_list = []
-    for _ in range(num_tokens):
-        next_token, start_time, end_time = decode_one_token(
-            model,
-            next_token.clone(),
-            cache_position,
-            past_key_values,
-        )
-        time_list.append(end_time)
-        gen_time_list.append(end_time - start_time)
-        generated_ids[:, cache_position] = next_token.int()
-        cache_position += 1
+    torch.compiler.reset()
+    with torch._inductor.utils.fresh_inductor_cache():
+        time_list = []
+        gen_time_list = []
+        for _ in range(num_tokens):
+            next_token, start_time, end_time = decode_one_token(
+                model,
+                next_token.clone(),
+                cache_position,
+                past_key_values,
+            )
+            time_list.append(end_time)
+            gen_time_list.append(end_time - start_time)
+            generated_ids[:, cache_position] = next_token.int()
+            cache_position += 1
 
     return generated_ids, time_list, gen_time_list
 

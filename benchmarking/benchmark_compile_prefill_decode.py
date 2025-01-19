@@ -87,9 +87,10 @@ def run_experiment(
     # report times
     if print_results:
         print(f"Prefill latency: {end_prefill-start_prefill:.4f} s")
-        print(f"Decode latency: {time_list[-1]-time_list[0]:.4f} s")
+        print(f"Decode latency (first): {time_list[0]-end_prefill:.4f} s")
+        print(f"Decode latency (rest): {time_list[-1]-time_list[0]:.4f} s")
         print(
-            f"Decode latency per token: {(time_list[-1]-time_list[0])/num_tokens_to_generate:.4f} s"
+            f"Decode latency per token (rest): {(time_list[-1]-time_list[0])/num_tokens_to_generate:.4f} s"
         )
         print(f"Full latency: {time_list[-1]-start_prefill:.4f} s")
 
