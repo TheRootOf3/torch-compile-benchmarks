@@ -143,13 +143,14 @@ def run_experiment(prompts: list[str], experiment_config: dict) -> float:
     save_experiment_results(
         results,
         experiment_config.copy(),
-        filename=f"./results/{experiment_config['name']}.json",
+        filename=f"./results_final/{experiment_config['name']}.json",
     )
 
 
 def main():
 
-    for num_prompts in [1, 2, 4, 8, 32, 128]:
+    # for num_prompts in [1, 2, 4, 8, 32, 128]:
+    for num_prompts in [128]:
         experiment_config = {
             "num_tokens_to_generate": 200,
             "compile_fn": None,
