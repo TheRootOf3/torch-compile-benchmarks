@@ -1,0 +1,63 @@
+In this example the activation function is silu, which is defined as silu(x) = x * sigmoid(x) (element-wise) 
+
+def forward(self, x):
+    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+    return down_proj
+
+
+# File: /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:186 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+permute_9: "f32[2048, 8192]" = torch.ops.aten.permute.default(arg10_1, [1, 0]);  arg10_1 = None
+view_19: "f32[8, 2048]" = torch.ops.aten.view.default(mul_10, [8, 2048])
+mm_4: "f32[8, 8192]" = torch.ops.aten.mm.default(view_19, permute_9);  view_19 = permute_9 = None
+view_20: "f32[1, 8, 8192]" = torch.ops.aten.view.default(mm_4, [1, 8, 8192]);  mm_4 = None
+sigmoid: "f32[1, 8, 8192]" = torch.ops.aten.sigmoid.default(view_20)
+mul_11: "f32[1, 8, 8192]" = torch.ops.aten.mul.Tensor(view_20, sigmoid);  view_20 = sigmoid = None
+permute_10: "f32[2048, 8192]" = torch.ops.aten.permute.default(arg11_1, [1, 0]);  arg11_1 = None
+view_21: "f32[8, 2048]" = torch.ops.aten.view.default(mul_10, [8, 2048]);  mul_10 = None
+mm_5: "f32[8, 8192]" = torch.ops.aten.mm.default(view_21, permute_10);  view_21 = permute_10 = None
+view_22: "f32[1, 8, 8192]" = torch.ops.aten.view.default(mm_5, [1, 8, 8192]);  mm_5 = None
+mul_12: "f32[1, 8, 8192]" = torch.ops.aten.mul.Tensor(mul_11, view_22);  mul_11 = view_22 = None
+permute_11: "f32[8192, 2048]" = torch.ops.aten.permute.default(arg12_1, [1, 0]);  arg12_1 = None
+view_23: "f32[8, 8192]" = torch.ops.aten.view.default(mul_12, [8, 8192]);  mul_12 = None
+mm_6: "f32[8, 2048]" = torch.ops.aten.mm.default(view_23, permute_11);  view_23 = permute_11 = None
+view_24: "f32[1, 8, 2048]" = torch.ops.aten.view.default(mm_6, [1, 8, 2048]);  mm_6 = None
+
+
+# Topologically Sorted Source Nodes: [linear_4], Original ATen: [aten.mm]
+    extern_kernels.mm(reinterpret_tensor(buf24, (8, 2048), (2048, 1), 0), reinterpret_tensor(arg10_1, (2048, 8192), (1, 2048), 0), out=buf25)
+    del arg10_1
+    buf26 = empty_strided_cpu((8, 8192), (8192, 1), torch.float32)
+    # Topologically Sorted Source Nodes: [linear_5], Original ATen: [aten.mm]
+    extern_kernels.mm(reinterpret_tensor(buf24, (8, 2048), (2048, 1), 0), reinterpret_tensor(arg11_1, (2048, 8192), (1, 2048), 0), out=buf26)
+    del arg11_1
+    buf27 = reinterpret_tensor(buf25, (1, 8, 8192), (65536, 8192, 1), 0); del buf25  # reuse
+    cpp_fused_mul_silu_7(buf27, buf26)
+    buf28 = reinterpret_tensor(buf24, (8, 2048), (2048, 1), 0); del buf24  # reuse
+    # Topologically Sorted Source Nodes: [down_proj], Original ATen: [aten.mm]
+    extern_kernels.mm(reinterpret_tensor(buf27, (8, 8192), (8192, 1), 0), reinterpret_tensor(arg12_1, (8192, 2048), (1, 8192), 0), out=buf28)
+
+
+cpp_fused_mul_silu_7 = async_compile.cpp_pybinding(['float*', 'const float*'], '''
+#include "/var/folders/zy/tf5h417916z3zcml60nrcxvc0000gn/T/torchinductor_aszab/tmpluswp7_8/vu/cvuvp4i7roujum4xemrfwnb3t4c5t3r3mihr4b7iegh6tcqvdg43.h"
+extern "C"  void kernel(float* in_out_ptr0,
+                       const float* in_ptr0)
+{
+    #pragma omp parallel num_threads(8)
+    {
+        int tid = omp_get_thread_num();
+        {
+            #pragma omp for
+            for(int64_t x0=static_cast<int64_t>(0LL); x0<static_cast<int64_t>(65536LL); x0+=static_cast<int64_t>(8LL))
+            {
+                auto tmp0 = at::vec::Vectorized<float>::loadu(in_out_ptr0 + static_cast<int64_t>(x0), static_cast<int64_t>(8));
+                auto tmp3 = at::vec::Vectorized<float>::loadu(in_ptr0 + static_cast<int64_t>(x0), static_cast<int64_t>(8));
+                auto tmp1 = decltype(tmp0)(1)/(decltype(tmp0)(1) + tmp0.neg().exp());
+                auto tmp2 = tmp0 * tmp1;
+                auto tmp4 = tmp2 * tmp3;
+                tmp4.store(in_out_ptr0 + static_cast<int64_t>(x0));
+            }
+        }
+    }
+}
+''')
+

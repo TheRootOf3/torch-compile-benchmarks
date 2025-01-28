@@ -1,0 +1,129 @@
+In this example the activation function is silu, which is defined as silu(x) = x * sigmoid(x) (element-wise) 
+
+def forward(self, x):
+    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+    return down_proj
+
+
+# File: /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:186 in forward, code: down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+permute_9: "f32[2048, 8192]" = torch.ops.aten.permute.default(arg10_1, [1, 0]);  arg10_1 = None
+view_19: "f32[8, 2048]" = torch.ops.aten.view.default(mul_10, [8, 2048])
+mm_4: "f32[8, 8192]" = torch.ops.aten.mm.default(view_19, permute_9);  view_19 = permute_9 = None
+view_20: "f32[1, 8, 8192]" = torch.ops.aten.view.default(mm_4, [1, 8, 8192]);  mm_4 = None
+sigmoid: "f32[1, 8, 8192]" = torch.ops.aten.sigmoid.default(view_20)
+mul_11: "f32[1, 8, 8192]" = torch.ops.aten.mul.Tensor(view_20, sigmoid);  view_20 = sigmoid = None
+permute_10: "f32[2048, 8192]" = torch.ops.aten.permute.default(arg11_1, [1, 0]);  arg11_1 = None
+view_21: "f32[8, 2048]" = torch.ops.aten.view.default(mul_10, [8, 2048]);  mul_10 = None
+mm_5: "f32[8, 8192]" = torch.ops.aten.mm.default(view_21, permute_10);  view_21 = permute_10 = None
+view_22: "f32[1, 8, 8192]" = torch.ops.aten.view.default(mm_5, [1, 8, 8192]);  mm_5 = None
+mul_12: "f32[1, 8, 8192]" = torch.ops.aten.mul.Tensor(mul_11, view_22);  mul_11 = view_22 = None
+permute_11: "f32[8192, 2048]" = torch.ops.aten.permute.default(arg12_1, [1, 0]);  arg12_1 = None
+view_23: "f32[8, 8192]" = torch.ops.aten.view.default(mul_12, [8, 8192]);  mul_12 = None
+mm_6: "f32[8, 2048]" = torch.ops.aten.mm.default(view_23, permute_11);  view_23 = permute_11 = None
+view_24: "f32[1, 8, 2048]" = torch.ops.aten.view.default(mm_6, [1, 8, 2048]);  mm_6 = None
+
+
+
+
+
+cpp_fused_mul_silu_7 = async_compile.cpp_pybinding(['float*', 'const float*'], '''
+#include "/var/folders/zy/tf5h417916z3zcml60nrcxvc0000gn/T/torchinductor_aszab/tmpluswp7_8/vu/cvuvp4i7roujum4xemrfwnb3t4c5t3r3mihr4b7iegh6tcqvdg43.h"
+extern "C"  void kernel(float* in_out_ptr0,
+                       const float* in_ptr0)
+{
+    #pragma omp parallel num_threads(8)
+    {
+        int tid = omp_get_thread_num();
+        {
+            #pragma omp for
+            for(int64_t x0=static_cast<int64_t>(0LL); x0<static_cast<int64_t>(65536LL); x0+=static_cast<int64_t>(8LL))
+            {
+                auto tmp0 = at::vec::Vectorized<float>::loadu(in_out_ptr0 + static_cast<int64_t>(x0), static_cast<int64_t>(8));
+                auto tmp3 = at::vec::Vectorized<float>::loadu(in_ptr0 + static_cast<int64_t>(x0), static_cast<int64_t>(8));
+                auto tmp1 = decltype(tmp0)(1)/(decltype(tmp0)(1) + tmp0.neg().exp());
+                auto tmp2 = tmp0 * tmp1;
+                auto tmp4 = tmp2 * tmp3;
+                tmp4.store(in_out_ptr0 + static_cast<int64_t>(x0));
+            }
+        }
+    }
+}
+''')
+
+
+---
+
+Recompilations
+
+Recompilations: prefill with 5 tokens, decode one by one, then prefill with 10 tokens, decode one by one, dynamic=None
+
+W0126 23:59:18.019000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [1/0_1] model__0_inference_0 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__0_inference_0.0
+W0126 23:59:26.723000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [2/0] model__1_inference_1 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__1_inference_1.1
+W0126 23:59:27.618000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [3/0] model__2_inference_2 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__2_inference_2.2
+V0126 23:59:27.700000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/1] [__recompiles] Recompiling function forward in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:776
+V0126 23:59:27.700000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/1] [__recompiles]     triggered by the following guard failure(s):
+V0126 23:59:27.700000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/1] [__recompiles]     - 0/0: tensor 'L['input_ids']' size mismatch at index 1. expected 5, actual 1
+V0126 23:59:27.721000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/1] [__recompiles] Recompiling function forward in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:513
+V0126 23:59:27.721000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/1] [__recompiles]     triggered by the following guard failure(s):
+V0126 23:59:27.721000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/1] [__recompiles]     - 1/0: tensor 'L['input_ids']' size mismatch at index 1. expected 5, actual 1
+W0126 23:59:28.793000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [1/1_1] model__3_inference_3 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__3_inference_3.3
+V0126 23:59:28.812000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/1] [__recompiles] Recompiling function torch_dynamo_resume_in_forward_at_552 in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:552
+V0126 23:59:28.812000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/1] [__recompiles]     triggered by the following guard failure(s):
+V0126 23:59:28.812000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/1] [__recompiles]     - 2/0: tensor 'L['___stack0']' size mismatch at index 0. expected 5, actual 1
+W0126 23:59:36.409000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [2/1] model__4_inference_4 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__4_inference_4.4
+V0126 23:59:36.897000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/1] [__recompiles] Recompiling function torch_dynamo_resume_in_forward_at_831 in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:831
+V0126 23:59:36.897000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/1] [__recompiles]     triggered by the following guard failure(s):
+V0126 23:59:36.897000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/1] [__recompiles]     - 3/0: tensor 'L['___stack0'].last_hidden_state' size mismatch at index 1. expected 5, actual 1
+W0126 23:59:36.930000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [3/1] model__5_inference_5 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__5_inference_5.5
+5 [(10, 23.67361283302307), (30, 6.618310213088989), (100, 22.617598056793213), (300, 66.97723197937012)]
+
+now prefill with 10
+
+V0127 00:01:15.166000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/2] [__recompiles] Recompiling function forward in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:776
+V0127 00:01:15.166000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/2] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:01:15.166000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/2] [__recompiles]     - 0/1: tensor 'L['input_ids']' size mismatch at index 1. expected 1, actual 10
+V0127 00:01:15.166000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/2] [__recompiles]     - 0/0: tensor 'L['input_ids']' size mismatch at index 1. expected 5, actual 10
+V0127 00:01:15.194000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/2] [__recompiles] Recompiling function forward in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:513
+V0127 00:01:15.194000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/2] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:01:15.194000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/2] [__recompiles]     - 1/1: tensor 'L['input_ids']' size mismatch at index 1. expected 1, actual 10
+V0127 00:01:15.194000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/2] [__recompiles]     - 1/0: tensor 'L['input_ids']' size mismatch at index 1. expected 5, actual 10
+W0127 00:01:16.273000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [1/2_1] model__6_inference_6 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__6_inference_6.6
+V0127 00:01:16.296000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/2] [__recompiles] Recompiling function torch_dynamo_resume_in_forward_at_552 in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:552
+V0127 00:01:16.296000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/2] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:01:16.296000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/2] [__recompiles]     - 2/1: tensor 'L['___stack0']' size mismatch at index 0. expected 1, actual 10
+V0127 00:01:16.296000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/2] [__recompiles]     - 2/0: tensor 'L['___stack0']' size mismatch at index 0. expected 5, actual 10
+W0127 00:01:28.046000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [2/2] model__7_inference_7 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__7_inference_7.7
+V0127 00:01:28.627000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/2] [__recompiles] Recompiling function torch_dynamo_resume_in_forward_at_831 in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:831
+V0127 00:01:28.627000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/2] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:01:28.627000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/2] [__recompiles]     - 3/1: tensor 'L['___stack0'].last_hidden_state' size mismatch at index 1. expected 1, actual 10
+V0127 00:01:28.627000 93283 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/2] [__recompiles]     - 3/0: tensor 'L['___stack0'].last_hidden_state' size mismatch at index 1. expected 5, actual 10
+W0127 00:01:28.680000 93283 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [3/2] model__8_inference_8 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_26_23_59_15_019177-pid_93283/torchinductor/model__8_inference_8.8
+10 [(10, 15.563463926315308), (30, 6.577885866165161), (100, 21.86661672592163), (300, 64.3924720287323)]
+
+---
+
+Recompilations: prefill with 5 tokens, decode one by one, then prefill with 10 tokens, decode one by one, dynamic=True
+
+W0127 00:10:49.680000 96333 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [1/0_1] model__0_inference_0 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_27_00_10_46_350310-pid_96333/torchinductor/model__0_inference_0.0
+W0127 00:11:02.888000 96333 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [2/0] model__1_inference_1 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_27_00_10_46_350310-pid_96333/torchinductor/model__1_inference_1.1
+W0127 00:11:04.206000 96333 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [3/0] model__2_inference_2 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_27_00_10_46_350310-pid_96333/torchinductor/model__2_inference_2.2
+V0127 00:11:04.355000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/1] [__recompiles] Recompiling function forward in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:776
+V0127 00:11:04.355000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/1] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:11:04.355000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [0/1] [__recompiles]     - 0/0: 2 <= L['input_ids'].size()[1]                                 # _dynamo/output_graph.py:463 in init_ambient_guards
+V0127 00:11:04.386000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/1] [__recompiles] Recompiling function forward in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:513
+V0127 00:11:04.386000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/1] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:11:04.386000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [1/1] [__recompiles]     - 1/0: 2 <= L['input_ids'].size()[1]                                 # _dynamo/output_graph.py:463 in init_ambient_guards
+W0127 00:11:05.458000 96333 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [1/1_1] model__3_inference_3 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_27_00_10_46_350310-pid_96333/torchinductor/model__3_inference_3.3
+V0127 00:11:05.483000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/1] [__recompiles] Recompiling function torch_dynamo_resume_in_forward_at_552 in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:552
+V0127 00:11:05.483000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/1] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:11:05.483000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [2/1] [__recompiles]     - 2/0: ___check_type_id(L['attention_mask'], 4314651472)
+W0127 00:11:14.687000 96333 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [2/1] model__4_inference_4 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_27_00_10_46_350310-pid_96333/torchinductor/model__4_inference_4.4
+V0127 00:11:15.215000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/1] [__recompiles] Recompiling function torch_dynamo_resume_in_forward_at_831 in /Users/aszab/EDU/CAM/modules/R244/project/venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:831
+V0127 00:11:15.215000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/1] [__recompiles]     triggered by the following guard failure(s):
+V0127 00:11:15.215000 96333 venv/lib/python3.12/site-packages/torch/_dynamo/guards.py:2813] [3/1] [__recompiles]     - 3/0: 2 <= L['___stack0'].last_hidden_state.size()[1]               # _dynamo/output_graph.py:463 in init_ambient_guards
+W0127 00:11:15.261000 96333 venv/lib/python3.12/site-packages/torch/_inductor/debug.py:434] [3/1] model__5_inference_5 debug trace: /Users/aszab/EDU/CAM/modules/R244/project/torch_compile_debug/run_2025_01_27_00_10_46_350310-pid_96333/torchinductor/model__5_inference_5.5
+5 [(10, 30.712109088897705), (30, 6.613070011138916), (100, 22.021349906921387), (300, 73.07708024978638)]
+
+now prefill with 10 
+
+10 [(10, 2.5858347415924072), (30, 7.412059783935547), (100, 22.285611867904663), (300, 65.38184189796448)]
