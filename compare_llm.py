@@ -1,4 +1,4 @@
-"""...
+"""Compare the performance of a model with and without torch.compile.
 
 Run in the following way for torch compilation logs:
 TORCHINDUCTOR_FORCE_DISABLE_CACHES=1 TORCH_COMPILE_DEBUG=1 python3 compare_llm.py
