@@ -1,5 +1,12 @@
 # Studying the Overhead of `torch.compile()` in Large Language Model Inference
 
+The report is available [here](/report.pdf).
+
+> **TL;DR** To lower the latency of initial LLM generations on spot instances, do not compile for the prefill phase. Furthermore, set `torch.compile(dynamic=True)` if expecting different prefill shapes (prompt lengths) to avoid extra recompilations. It can be also approached by padding on the left until a fixed sequence length (but this has the cost of fixed prefill shape and may lead to suboptimal tensor optimisations).
+
+## Structure of this Repo
+
+
 📚 This repository contains files used in the project *Studying the Overhead of `torch.compile()` in Large Language Model Inference*.
 
 The structure of the repo is as follows:
@@ -14,3 +21,8 @@ The structure of the repo is as follows:
 - `cupcake_ipsum.txt` -- file containing synthetically long context.
 - `benchmarking_results_final/` -- results from prefill+decode experiments.
 - `resources/` -- resources for the report, e.g. images, plots, etc.
+- `report.pdf` -- a report with some cool insights. Heads up -- it was written overnight to make it for the deadline, so if you spot any typos this is likely the reason 😉  
+
+## Note
+
+This works has been submitted as part of the module assignment for R244: Large Scale Data Optimisation and Processing.
