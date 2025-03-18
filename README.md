@@ -2,6 +2,9 @@
 
 The report is available [here](/report.pdf).
 
+![](/resources/plots/bs128_joint.png)
+
+
 > **TL;DR** To lower the latency of initial LLM generations on spot instances, do not compile for the prefill phase. Furthermore, set `torch.compile(dynamic=True)` if expecting different prefill shapes (prompt lengths) to avoid extra recompilations. It can be also approached by padding on the left until a fixed sequence length (but this has the cost of fixed prefill shape and may lead to suboptimal tensor optimisations).
 
 ## Structure of this Repo
